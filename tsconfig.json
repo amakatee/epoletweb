@@ -13,10 +13,10 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "plugins": [
       {
         "name": "next"
@@ -29,8 +29,10 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     "**/*.ts",
-    "**/*.tsx"
-, "app/layout.jsx", "components/Navbar.jsx"  ],
+    "**/*.tsx",
+    "**/*.jsx",
+    "**/*.js"
+  ],
   "exclude": [
     "node_modules"
   ]
