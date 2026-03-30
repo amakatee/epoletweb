@@ -75,7 +75,6 @@ const Main = ({ mainBanner }) => {
             className="object-cover w-full h-full main-image-cont"
             src={imageUrl}
             alt={title}
-            priority
             onError={(e) => {
               console.error('Image failed to load:', imageUrl);
               e.target.style.display = 'none';
