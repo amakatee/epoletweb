@@ -1,0 +1,18 @@
+# *
+User-agent: *
+Disallow: /galierieia
+Disallow: /services
+Disallow: /contacts
+Disallow: /index_2
+Disallow: /price
+
+
+# *
+
+Allow: /
+
+# Host
+Host: https://epolet5.ru/
+
+# Sitemaps
+Sitemap: https://epolet5.ru/sitemap.xml
