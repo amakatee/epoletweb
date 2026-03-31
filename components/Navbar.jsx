@@ -246,14 +246,12 @@ const Navbar = () => {
     if (isHovering) {
       gsap.to(logoRef.current, {
         scale: 1.05,
-        rotate: 3,
         duration: 0.3,
         ease: 'power2.out',
       });
     } else {
       gsap.to(logoRef.current, {
         scale: 1,
-        rotate: 0,
         duration: 0.3,
         ease: 'power2.out',
       });

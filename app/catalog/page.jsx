@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, Grid3x3, List, ChevronDown } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import SEO from '../../components/Seo'
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -149,7 +150,14 @@ export default function Katalog() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+      <SEO 
+        title="Каталог продукции"
+        description="Полный каталог изделий из пенополиуретана (ППУ). Мягкий, жесткий и интегральный ППУ для различных отраслей. Высокое качество, доступные цены."
+        image="/ep.jpg"
+        type="website"
+      />
       {/* Hero Section */}
+
       <HeaderSection 
         imageURL={katalogBanner?.imageKatalog} 
         mainText={katalogBanner?.titleKatalog || 'Каталог продукции'} 

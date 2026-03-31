@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle, XCircle } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import SEO from '../../components/Seo'
 
 // Register GSAP plugins
 if (typeof window !== 'undefined') {
@@ -202,7 +203,12 @@ export default function Contact() {
 
   return (
     <div className=" bg-gradient-to-b from-gray-900 to-black">
-      {/* Hero Section */}
+      <SEO 
+        title="Контакты"
+        description="Свяжитесь с нами любым удобным способом. Телефон: +7(916)003-28-81. Email: partner@epolet5.ru. Адрес: Московская область, пгт. Шаховская, Волочановское шоссе дом 6А."
+        image="/ep.png"
+        type="website"
+      />
       <HeaderSection 
         imageURL={contactBanner?.imageContacts} 
         mainText={contactBanner?.titleContats || 'Контакты'} 

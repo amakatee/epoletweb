@@ -1,10 +1,11 @@
 // app/layout.jsx
-import Navbar from '../components/Navbar'; // Adjust path based on your actual structure
+import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { StateContext } from '../context/StateContext'; // Fixed import path
+import { StateContext } from '../context/StateContext';
 import './globals.css';
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://epolet.ru'),
   title: {
     default: 'Изделия из ППУ - Эполет',
     template: '%s | Эполет'
@@ -26,6 +27,14 @@ export const metadata = {
     description: 'Производство изделий из пенополиуретана',
     type: 'website',
     locale: 'ru_RU',
+    images: [
+      {
+        url: '/ep.png',
+        width: 512,
+        height: 512,
+        alt: 'Эполет',
+      },
+    ],
   },
 };
 

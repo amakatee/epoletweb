@@ -237,6 +237,12 @@ export default function ProductDetails() {
 
     return (
         <div className="min-h-screen bg-black pt-20">
+             <SEO 
+        title={product.name}
+        description={product.description || `Купить ${product.name} от производителя Эполет. Высокое качество, доступные цены.`}
+        image={product.images?.[0]}
+        type="product"
+      />
             <div className="px-4 mx-auto sm:px-6 lg:px-8">
                 {/* Back Link */}
                 <a 

@@ -10,6 +10,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import HeaderSection from '../../components/HeaderSection';
 import Link from 'next/link';
+import SEO from '../../components/Seo';
 
 // Register GSAP plugins
 if (typeof window !== 'undefined') {
@@ -211,6 +212,14 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-black">
+      
+      <SEO 
+        title="О компании"
+        description="Узнайте больше о компании Эполет. 20 лет опыта в производстве изделий из пенополиуретана. Наши преимущества: гибкое ценообразование, индивидуальный подход, высокое качество."
+        image="/ep.png"
+        type="website"
+      />
+   
       <HeaderSection 
         imageURL={bannerData?.imageAbout} 
         mainText={bannerData?.aboutsection || 'О компании'} 
