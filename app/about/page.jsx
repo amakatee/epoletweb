@@ -26,9 +26,29 @@ export default function AboutPage() {
   const ctaRef = useRef(null);
   const containerRef = useRef(null);
 
+  // Fallback data in case Sanity fetch fails
+  const fallbackData = {
+    aboutArray: [
+      { description: 'Гибкое ценообразование' },
+      { description: 'Изготовление изделий любой сложности' },
+      { description: 'Гарантия качества 20 лет' }
+    ],
+    maindetails: 'Компания Эполет специализируется на производстве изделий из мягкого, жесткого и интегрального пенополиуретана. Мы предлагаем высококачественную продукцию для различных отраслей промышленности и бытового использования.',
+    aboutsection: 'О компании',
+    titleAbout: 'О нас'
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
+        // Check if Sanity is configured
+        if (!process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || !client) {
+          console.warn('Sanity not configured, using fallback data');
+          setBannerData(fallbackData);
+          setLoading(false);
+          return;
+        }
+
         const data = await client.fetch(`
           *[_type == "banner"][0] {
             titleAbout,
@@ -40,9 +60,17 @@ export default function AboutPage() {
             }
           }
         `);
-        setBannerData(data);
+        
+        // Merge with fallback for missing fields
+        setBannerData({
+          ...fallbackData,
+          ...data,
+          aboutArray: data?.aboutArray?.length ? data.aboutArray : fallbackData.aboutArray,
+        });
       } catch (error) {
         console.error('Error fetching about data:', error);
+        // Use fallback data on error
+        setBannerData(fallbackData);
       } finally {
         setLoading(false);
       }
@@ -212,7 +240,6 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      
       <SEO 
         title="О компании"
         description="Узнайте больше о компании Эполет. 20 лет опыта в производстве изделий из пенополиуретана. Наши преимущества: гибкое ценообразование, индивидуальный подход, высокое качество."
@@ -273,7 +300,7 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Company Description - Only fetched data */}
+        {/* Company Description */}
         {bannerData?.maindetails && (
           <div ref={descriptionRef} className="w-full px-4 pb-12 sm:px-6 md:px-8 sm:pb-16 md:pb-20 lg:pb-24">
             <div className="max-w-4xl mx-auto">
@@ -289,14 +316,14 @@ export default function AboutPage() {
 
         {/* CTA Button */}
         <div className="pb-12 text-center sm:pb-16 md:pb-20 lg:pb-24">
-  <Link 
-    href="/catalog"
-    ref={ctaRef}
-    className="inline-block px-8 py-3.5 bg-yellow-main text-white-900 font-medium rounded-lg text-base sm:text-lg hover:bg-yellow-400 transition-all duration-300 shadow-md hover:shadow-lg"
-  >
-    Перейти в каталог
-  </Link>
-</div>
+          <Link 
+            href="/catalog"
+            ref={ctaRef}
+            className="inline-block px-8 py-3.5 bg-yellow-main text-black font-medium rounded-lg text-base sm:text-lg hover:bg-yellow-400 transition-all duration-300 shadow-md hover:shadow-lg"
+          >
+            Перейти в каталог
+          </Link>
+        </div>
       </div>
     </div>
   );
