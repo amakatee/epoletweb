@@ -1,332 +1,343 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import Link from 'next/link';
 import { AiOutlineUser, AiOutlineMail } from 'react-icons/ai';
 import { BsTelephone } from 'react-icons/bs';
+import { IoClose } from 'react-icons/io5';
+import { gsap } from 'gsap';
 
 const Form = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const formRef = useRef(null);
+  const modalContentRef = useRef(null);
+
   const {
     register,
     formState: { errors },
     handleSubmit,
     reset,
+    setValue,
+    watch,
   } = useForm();
+
+  const watchedPhone = watch('Phone', '');
+
+  // GSAP Animations
+  useEffect(() => {
+    if (!formRef.current) return;
+
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        formRef.current,
+        { opacity: 0, y: 40 },
+        { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }
+      );
+
+      const fields = formRef.current.querySelectorAll('.form-field');
+      if (fields.length) {
+        gsap.fromTo(
+          fields,
+          { opacity: 0, y: 20 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            stagger: 0.08,
+            ease: 'power2.out',
+            delay: 0.2,
+          }
+        );
+      }
+    }, formRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  useEffect(() => {
+    if (!modalContentRef.current) return;
+
+    if (showSuccess) {
+      gsap.fromTo(
+        modalContentRef.current,
+        { opacity: 0, scale: 0.85, y: 30 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: 'back.out(1.2)' }
+      );
+    }
+  }, [showSuccess]);
 
   const onSubmit = async (values) => {
     console.log('📝 Отправка формы:', values);
-    
+
     setIsLoading(true);
     setError('');
 
     try {
       const response = await axios.post('/api/contact', values, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000, // 30 секунд таймаут
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 30000,
       });
-      
-      console.log('✅ Ответ сервера:', response.data);
-      
+
       if (response.status === 200 && response.data.success) {
         setShowSuccess(true);
         reset();
-        
-        // Автоматически скрыть сообщение через 5 секунд
-        setTimeout(() => {
-          setShowSuccess(false);
-        }, 5000);
+        setTimeout(() => setShowSuccess(false), 5000);
       } else {
         throw new Error(response.data.error || 'Неизвестная ошибка');
       }
     } catch (err) {
       console.error('❌ Ошибка отправки:', err);
-      
-      // Обработка разных типов ошибок
       if (err.code === 'ECONNABORTED') {
         setError('Превышено время ожидания ответа. Проверьте интернет-соединение.');
       } else if (err.response) {
-        // Сервер ответил с ошибкой
-        const serverError = err.response.data?.error || 'Ошибка сервера';
-        setError(`Ошибка: ${serverError}`);
-        
-        // Детальное логирование
-        console.error('Детали ошибки:', {
-          status: err.response.status,
-          data: err.response.data,
-          headers: err.response.headers
-        });
-      } else if (err.request) {
-        // Запрос был отправлен, но ответа нет
-        setError('Сервер не отвечает. Проверьте интернет-соединение.');
+        setError(`Ошибка: ${err.response.data?.error || 'Ошибка сервера'}`);
       } else {
-        // Ошибка на стороне клиента
-        setError(err.message || 'Произошла ошибка при отправке');
+        setError('Сервер не отвечает. Проверьте интернет-соединение.');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const closeModal = () => {
-    setShowSuccess(false);
-  };
+  const closeModal = () => setShowSuccess(false);
 
-  // Форматирование номера телефона (только цифры)
+  // Fixed phone input handler for 10 digits
   const handlePhoneInput = (e) => {
     let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 11) {
-      value = value.slice(0, 11);
-    }
+    // Limit to 10 digits (without country code)
+    if (value.length > 10) value = value.slice(0, 10);
+    setValue('Phone', value, { shouldValidate: true });
     e.target.value = value;
+  };
+
+  // Format phone number as: +7 9** *** ** **
+  const formatPhoneVisual = (raw) => {
+    if (!raw) return '';
+    // Format as: 9** *** ** **
+    if (raw.length >= 1) {
+      let formatted = raw.slice(0, 1);
+      if (raw.length >= 2) formatted += raw.slice(1, 2);
+      if (raw.length >= 3) formatted += raw.slice(2, 3);
+      if (raw.length >= 4) formatted += ' ' + raw.slice(3, 4);
+      if (raw.length >= 5) formatted += raw.slice(4, 5);
+      if (raw.length >= 6) formatted += raw.slice(5, 6);
+      if (raw.length >= 7) formatted += ' ' + raw.slice(6, 7);
+      if (raw.length >= 8) formatted += raw.slice(7, 8);
+      if (raw.length >= 9) formatted += ' ' + raw.slice(8, 9);
+      if (raw.length >= 10) formatted += raw.slice(9, 10);
+      return formatted;
+    }
+    return raw;
   };
 
   return (
     <>
-      <div className="py-16 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="max-w-md mx-auto px-4">
-          <h1 className="text-2xl md:text-3xl font-light text-center text-gray-800 mb-10">
-            Напишите нам
-          </h1>
-
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {/* Поле Имя */}
-            <div>
-              <div className="relative">
-                <AiOutlineUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
-                <input
-                  type="text"
-                  placeholder="Имя *"
-                  {...register('Name', {
-                    required: 'Пожалуйста, укажите ваше имя',
-                    minLength: {
-                      value: 2,
-                      message: 'Имя должно содержать минимум 2 символа',
-                    },
-                  })}
-                  className="w-full pl-10 pr-4 py-3 border-b-2 border-gray-300 focus:border-yellow-main bg-transparent outline-none transition-colors text-gray-700 placeholder:text-gray-400"
-                />
+      <div className=" py-10 md:py-15 bg-gradient-to-br from-zinc-50 via-white to-zinc-100 flex items-center">
+        <div className="w-full max-w-lg mx-auto px-5 sm:px-6">
+          <div ref={formRef} className="bg-white rounded-3xl shadow-xl shadow-black/5 px-4 md:p-10 border border-zinc-100">
+            
+            {/* Header */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-16 h-4 bg-yellow-main/10 rounded-2xl ">
               </div>
-              {errors.Name && (
-                <p className="text-red-500 text-sm mt-1 ml-1">
-                  {errors.Name.message}
-                </p>
-              )}
-            </div>
-
-            {/* Поле Email */}
-            <div>
-              <div className="relative">
-                <AiOutlineMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
-                <input
-                  type="email"
-                  placeholder="Email *"
-                  {...register('Email', {
-                    required: 'Пожалуйста, укажите email',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Введите корректный email адрес',
-                    },
-                  })}
-                  className="w-full pl-10 pr-4 py-3 border-b-2 border-gray-300 focus:border-yellow-main bg-transparent outline-none transition-colors text-gray-700 placeholder:text-gray-400"
-                />
-              </div>
-              {errors.Email && (
-                <p className="text-red-500 text-sm mt-1 ml-1">
-                  {errors.Email.message}
-                </p>
-              )}
-            </div>
-
-            {/* Поле Телефон */}
-            <div>
-              <div className="relative">
-                <BsTelephone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
-                <input
-                  type="tel"
-                  placeholder="Номер телефона"
-                  {...register('Phone', {
-                    pattern: {
-                      value: /^[0-9]{10,11}$/,
-                      message: 'Введите корректный номер телефона (10-11 цифр)',
-                    },
-                  })}
-                  onInput={handlePhoneInput}
-                  className="w-full pl-10 pr-4 py-3 border-b-2 border-gray-300 focus:border-yellow-main bg-transparent outline-none transition-colors text-gray-700 placeholder:text-gray-400"
-                />
-              </div>
-              {errors.Phone && (
-                <p className="text-red-500 text-sm mt-1 ml-1">
-                  {errors.Phone.message}
-                </p>
-              )}
-              <p className="text-gray-400 text-xs mt-1 ml-1">
-                Формат: 9xx xxx xx xx (только цифры)
+              <h1 className="text-3xl md:text-4xl font-light tracking-tight text-zinc-900">
+                Напишите нам
+              </h1>
+              <p className="mt-3 text-zinc-500 text-[15px]">
+                Мы ответим в ближайшее время
               </p>
             </div>
 
-            {/* Поле Сообщение */}
-            <div>
-              <textarea
-                placeholder="Сообщение *"
-                rows={5}
-                {...register('Message', {
-                  required: 'Пожалуйста, напишите ваше сообщение',
-                  minLength: {
-                    value: 10,
-                    message: 'Сообщение должно содержать минимум 10 символов',
-                  },
-                })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-yellow-main focus:ring-1 focus:ring-yellow-main bg-white outline-none transition-colors text-gray-700 placeholder:text-gray-400 resize-none"
-              />
-              {errors.Message && (
-                <p className="text-red-500 text-sm mt-1 ml-1">
-                  {errors.Message.message}
-                </p>
-              )}
-            </div>
-
-            {/* Чекбокс согласия */}
-            <div>
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  {...register('Agreement', {
-                    required: 'Необходимо принять условия обработки персональных данных',
-                  })}
-                  className="mt-1 w-5 h-5 accent-yellow-main cursor-pointer"
-                />
-                <span className="text-sm text-gray-600 leading-relaxed">
-                  Согласен с{' '}
-                  <Link
-                    href="/confidential"
-                    className="text-yellow-main border-b border-yellow-main hover:opacity-80 transition-opacity"
-                    target="_blank"
-                  >
-                    условиями
-                  </Link>{' '}
-                  обработки персональных данных *
-                </span>
-              </label>
-              {errors.Agreement && (
-                <p className="text-red-500 text-sm mt-2 ml-8">
-                  {errors.Agreement.message}
-                </p>
-              )}
-            </div>
-
-            {/* Кнопка отправки */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-6 bg-yellow-main hover:bg-yellow-600 text-white font-medium rounded-lg transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-md"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Отправка...
-                </span>
-              ) : (
-                'Отправить сообщение'
-              )}
-            </button>
-
-            {/* Дополнительные кнопки */}
-            <div className="space-y-3">
-              <Link href="/sout">
-                <button
-                  type="button"
-                  className="w-full py-3 px-6 border-2 border-yellow-main text-yellow-main hover:bg-yellow-main hover:text-white font-medium rounded-lg transition-all"
-                >
-                  СОУТ
-                </button>
-              </Link>
-
-              <Link href="/confidential">
-                <button
-                  type="button"
-                  className="w-full py-3 px-6 border-2 border-gray-300 text-gray-600 hover:border-yellow-main hover:text-yellow-main font-medium rounded-lg transition-all"
-                >
-                  Политика Конфиденциальности
-                </button>
-              </Link>
-            </div>
-
-            {/* Сообщение об ошибке */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm text-center">{error}</p>
+            <form className="space-y-8" onSubmit={handleSubmit(onSubmit)}>
+              {/* Name Field */}
+              <div className="form-field">
+                <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1.5 font-medium">
+                  Ваше имя
+                </label>
+                <div className="relative group">
+                  <AiOutlineUser className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-xl transition-colors group-focus-within:text-yellow-main" />
+                  <input
+                    type="text"
+                    placeholder="Иван Иванов"
+                    {...register('Name', { required: 'Пожалуйста, укажите ваше имя', minLength: { value: 2, message: 'Имя должно содержать минимум 2 символа' } })}
+                    className="w-full pl-14 pr-5 py-4 bg-zinc-50 border border-transparent focus:border-yellow-main rounded-2xl outline-none text-zinc-800 placeholder:text-zinc-400 transition-all focus:bg-white focus:shadow-sm text-[15px]"
+                  />
+                </div>
+                {errors.Name && <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.Name.message}</p>}
               </div>
-            )}
-          </form>
+
+              {/* Email Field */}
+              <div className="form-field">
+                <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1.5 font-medium">
+                  Email адрес
+                </label>
+                <div className="relative group">
+                  <AiOutlineMail className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-xl transition-colors group-focus-within:text-yellow-main" />
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    {...register('Email', {
+                      required: 'Пожалуйста, укажите email',
+                      pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i, message: 'Введите корректный email адрес' },
+                    })}
+                    className="w-full pl-14 pr-5 py-4 bg-zinc-50 border border-transparent focus:border-yellow-main rounded-2xl outline-none text-zinc-800 placeholder:text-zinc-400 transition-all focus:bg-white focus:shadow-sm text-[15px]"
+                  />
+                </div>
+                {errors.Email && <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.Email.message}</p>}
+              </div>
+
+              {/* Phone Field with proper formatting */}
+              <div className="form-field">
+                <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1.5 font-medium">
+                  Номер телефона
+                </label>
+                <div className="relative group">
+                  <BsTelephone className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-xl transition-colors group-focus-within:text-yellow-main" />
+                  <div className="absolute left-14 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">
+                    +7
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder="9__ ___ __ __"
+                    {...register('Phone', { 
+                      required: 'Пожалуйста, укажите номер телефона',
+                      pattern: { value: /^[0-9]{10}$/, message: 'Введите корректный номер телефона (10 цифр)' } 
+                    })}
+                    onInput={handlePhoneInput}
+                    className="w-full pl-24 pr-5 py-4 bg-zinc-50 border border-transparent focus:border-yellow-main rounded-2xl outline-none text-zinc-800 placeholder:text-zinc-400 transition-all focus:bg-white focus:shadow-sm text-[15px]"
+                  />
+                </div>
+                {errors.Phone && <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.Phone.message}</p>}
+                <div className="mt-2 pl-1 flex items-center gap-2 text-[13px]">
+                  {/* <span className="text-emerald-600 font-medium">+7</span> */}
+                  {/* <span className="text-zinc-400">
+                    {watchedPhone ? formatPhoneVisual(watchedPhone) : '9__ ___ __ __'}
+                  </span> */}
+                </div>
+              </div>
+
+              {/* Message Field */}
+              <div className="form-field">
+                <label className="block text-xs uppercase tracking-widest text-zinc-500 mb-1.5 font-medium">
+                  Сообщение
+                </label>
+                <textarea
+                  placeholder="Расскажите подробнее о вашем запросе..."
+                  rows={5}
+                  {...register('Message', { required: 'Пожалуйста, напишите ваше сообщение', minLength: { value: 10, message: 'Сообщение должно содержать минимум 10 символов' } })}
+                  className="w-full px-5 py-4 bg-zinc-50 border border-transparent focus:border-yellow-main rounded-3xl outline-none text-zinc-800 placeholder:text-zinc-400 transition-all focus:bg-white focus:shadow-sm resize-y min-h-[140px] text-[15px]"
+                />
+                {errors.Message && <p className="text-red-500 text-xs mt-1.5 pl-1">{errors.Message.message}</p>}
+              </div>
+
+              {/* Agreement */}
+              <div className="form-field pt-2">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    {...register('Agreement', { required: 'Необходимо принять условия обработки персональных данных' })}
+                    className="mt-1 w-5 h-5 accent-yellow-main border-2 border-zinc-300 rounded focus:ring-yellow-main cursor-pointer"
+                  />
+                  <span className="text-sm text-zinc-600 leading-relaxed select-none">
+                    Согласен с{' '}
+                    <Link href="/confidential" className="text-yellow-main hover:text-yellow-600 border-b border-yellow-main/60 hover:border-yellow-main transition-all" target="_blank">
+                      условиями
+                    </Link>{' '}
+                    обработки персональных данных *
+                  </span>
+                </label>
+                {errors.Agreement && <p className="text-red-500 text-xs mt-2 pl-8">{errors.Agreement.message}</p>}
+              </div>
+
+              {/* Main Submit Button - Consistent styling */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-4 bg-[#fac800] border-1 border-[#fac800] hover:bg-white hover:text-[#fac800] text-white font-semibold text-base rounded-2xl transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-yellow-main/30 hover:shadow-xl hover:-translate-y-px flex items-center justify-center gap-3 group"
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>Отправка...</span>
+                  </>
+                ) : (
+                  <>
+                    Отправить сообщение
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </>
+                )}
+              </button>
+
+              {/* Secondary Buttons - Consistent styling with yellow theme */}
+              <div className="grid grid-cols-1 gap-4 pt-4 pb-5">
+                <Link href="/sout" className="block">
+                  <button
+                    type="button"
+                    className="group w-full py-4 border-1 border-[#fac800] bg-transparent hover:bg-[#fac800] text-[#fac800] hover:text-white font-medium rounded-2xl transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-2.5"
+                  >
+                    СОУТ
+                    <span className="transition-transform group-hover:translate-x-1">→</span>
+                  </button>
+                </Link>
+
+                <Link href="/confidential" className="block">
+                  <button
+                    type="button"
+                    className="group w-full py-4 border-1 border-[#fac800] bg-transparent hover:bg-[#fac800] text-[#fac800] hover:text-white font-medium rounded-2xl transition-all duration-300 active:scale-[0.98]"
+                  >
+                    Политика Конфиденциальности
+                  </button>
+                </Link>
+              </div>
+
+              {error && (
+                <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-2xl text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+            </form>
+          </div>
+
         </div>
       </div>
 
-      {/* Модальное окно успеха */}
+      {/* Success Modal */}
       {showSuccess && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-fadeIn"
-            onClick={closeModal}
-          />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-gradient-to-br from-green-500 to-green-600 rounded-2xl z-50 p-8 text-center shadow-2xl animate-slideUp">
-            <div className="mb-4">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-xl" onClick={closeModal} />
+          <div ref={modalContentRef} className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="p-10 text-center">
+              <div className="mx-auto mb-8 w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-11 h-11 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.75">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-white text-xl font-semibold mb-2">Спасибо!</h3>
-              <p className="text-white/90">
-                Ваше сообщение отправлено. <br />
-                Мы свяжемся с вами в ближайшее время.
+              <h3 className="text-2xl font-semibold text-zinc-900 mb-3">Спасибо за сообщение!</h3>
+              <p className="text-zinc-600 leading-relaxed text-[15px]">
+                Мы получили вашу заявку.<br />Скоро свяжемся с вами.
               </p>
             </div>
-            <button
-              onClick={closeModal}
-              className="mt-4 px-6 py-2 bg-white text-green-600 rounded-lg hover:bg-gray-100 transition-colors font-medium"
-            >
-              Закрыть
-            </button>
+            <div className="border-t border-zinc-100 px-10 py-6 flex justify-center">
+              <button
+                onClick={closeModal}
+                className="flex items-center gap-2 px-8 py-3 text-sm font-medium text-zinc-500 hover:text-black transition-colors group"
+              >
+                <IoClose className="text-xl group-hover:rotate-90 transition-transform" />
+                Закрыть
+              </button>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-yellow-main to-transparent" />
           </div>
-        </>
+        </div>
       )}
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -40%);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%);
-          }
-        }
-        
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
-        }
-      `}</style>
     </>
   );
 };

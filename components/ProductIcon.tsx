@@ -3,7 +3,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+// Register GSAP plugins
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 interface Product {
   _id: string;
@@ -28,6 +35,10 @@ interface ProductIconProps {
 }
 
 export default function ProductIcon({ product, viewMode = 'grid', priority = false }: ProductIconProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLSpanElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  
   // Universal image URL getter - handles ALL possible structures
   const getImageUrl = (): string | null => {
     if (!product) return null;
@@ -58,13 +69,98 @@ export default function ProductIcon({ product, viewMode = 'grid', priority = fal
   
   const imageUrl = getImageUrl();
   const slug = typeof product.slug === 'string' ? product.slug : product.slug?.current;
+
+  useEffect(() => {
+    if (!cardRef.current) return;
+
+    const ctx = gsap.context(() => {
+      // Card entrance animation
+      gsap.fromTo(cardRef.current,
+        {
+          opacity: 0,
+          y: 40,
+          scale: 0.95
+        },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.6,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: cardRef.current,
+            start: "top 85%",
+            toggleActions: "play none none reverse"
+          }
+        }
+      );
+
+      // Image hover animation
+      if (imageRef.current) {
+        const handleMouseEnter = () => {
+          gsap.to(imageRef.current, {
+            scale: 1.08,
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        };
+
+        const handleMouseLeave = () => {
+          gsap.to(imageRef.current, {
+            scale: 1,
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        };
+
+        const imageElement = imageRef.current;
+        imageElement.addEventListener('mouseenter', handleMouseEnter);
+        imageElement.addEventListener('mouseleave', handleMouseLeave);
+
+        return () => {
+          imageElement.removeEventListener('mouseenter', handleMouseEnter);
+          imageElement.removeEventListener('mouseleave', handleMouseLeave);
+        };
+      }
+
+      // Button hover animation - only scale, keep yellow background
+      if (buttonRef.current) {
+        const button = buttonRef.current;
+        const handleMouseEnter = () => {
+          gsap.to(button, {
+            scale: 1.05,
+            boxShadow: "0 10px 20px rgba(250, 200, 0, 0.4)",
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        };
+
+        const handleMouseLeave = () => {
+          gsap.to(button, {
+            scale: 1,
+            boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        };
+
+        button.addEventListener('mouseenter', handleMouseEnter);
+        button.addEventListener('mouseleave', handleMouseLeave);
+
+        return () => {
+          button.removeEventListener('mouseenter', handleMouseEnter);
+          button.removeEventListener('mouseleave', handleMouseLeave);
+        };
+      }
+    }, cardRef);
+
+    return () => ctx.revert();
+  }, []);
   
   // Handle image loading error
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     console.error('Image failed to load:', imageUrl);
-    // Hide the image on error
     e.currentTarget.style.display = 'none';
-    // You could also show a fallback
     const parent = e.currentTarget.parentElement;
     if (parent) {
       const fallback = document.createElement('div');
@@ -78,15 +174,15 @@ export default function ProductIcon({ product, viewMode = 'grid', priority = fal
   
   if (viewMode === 'list') {
     return (
-      <Link href={`/product/${slug}`}>
-        <div className="flex gap-6 p-4 transition-all border border-gray-700 rounded-2xl bg-white/5 hover:bg-white/10 hover:border-primary-yellow group">
+      <Link href={`/product/${slug}`} className="block w-full">
+        <div className="flex gap-6 p-4 transition-all border border-gray-700 rounded-2xl bg-white/5 hover:bg-white/10 hover:border-primary-yellow group w-full">
           <div className="relative flex-shrink-0 w-32 h-32 overflow-hidden rounded-xl">
             {imageUrl ? (
               <Image
                 src={imageUrl}
                 alt={product.name || 'Product'}
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
                 sizes="128px"
                 onError={handleImageError}
               />
@@ -103,23 +199,31 @@ export default function ProductIcon({ product, viewMode = 'grid', priority = fal
             {product.description && (
               <p className="text-sm text-gray-400 line-clamp-2">{product.description}</p>
             )}
+            {/* Button for list view - Always Yellow */}
+            <span className="inline-block mt-3 px-4 py-1.5 bg-yellow-main text-gray-900 rounded-lg text-xs font-medium shadow-md">
+              Подробнее
+            </span>
           </div>
         </div>
       </Link>
     );
   }
   
-  // Grid view (default)
+  // Grid view (default) - Full width cards
   return (
-    <Link href={`/product/${slug}`}>
-      <div className="group">
-        <div className="relative overflow-hidden rounded-2xl bg-white/5 aspect-square">
+    <Link href={`/product/${slug}`} className="block w-full">
+      <div
+        ref={cardRef}
+        className="group cursor-pointer w-full"
+      >
+        <div className="relative overflow-hidden rounded-2xl bg-white/5 aspect-square w-full">
           {imageUrl ? (
             <Image
+              ref={imageRef as any}
               src={imageUrl}
               alt={product.name || 'Product'}
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-300"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
               priority={priority}
               onError={handleImageError}
@@ -131,9 +235,17 @@ export default function ProductIcon({ product, viewMode = 'grid', priority = fal
           )}
         </div>
         <div className="mt-4 text-center">
-          <h3 className="text-lg font-medium text-white transition-colors group-hover:text-primary-yellow">
+          <h3 className="text-lg font-medium text-white transition-colors group-hover:text-yellow-main">
             {product.name}
           </h3>
+          {/* Button under each card - Always Yellow */}
+          <span
+            ref={buttonRef}
+            className="inline-block mt-3 px-5 py-2 bg-yellow-main text-gray-900 rounded-lg text-sm font-medium shadow-md"
+            style={{ backgroundColor: '#FDB813', color: '#1a1a1a' }}
+          >
+            Подробнее
+          </span>
         </div>
       </div>
     </Link>

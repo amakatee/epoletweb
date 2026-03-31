@@ -14,7 +14,7 @@ const CONTACT_INFO = {
   email: 'partner@epolet5.ru',
   address: 'Московская Область, пгт. Шаховская, Волочановское шоссе дом 6А',
   mapUrl: 'https://yandex.ru/map-widget/v1/-/CCUFFKVwxC',
-  workHours: 'Ежедневно с 9:00 до 21:00',
+  // workHours: 'Ежедневно с 9:00 до 21:00',
 };
 
 const SOCIAL_LINKS = [
@@ -46,7 +46,6 @@ const Footer = () => {
               />
             </div>
             <div className="flex items-start gap-3 text-sm text-gray-300">
-              <MapPinIcon className="w-5 h-5 text-yellow-main flex-shrink-0 mt-0.5" />
               <span className="text-sm leading-relaxed footer-map-address">
                 {CONTACT_INFO.address}
               </span>
@@ -130,14 +129,14 @@ const Footer = () => {
             <p className="text-xs text-gray-400">
               © {new Date().getFullYear()} Эполет. Все права защищены.
             </p>
-            <div className="flex gap-6 text-xs text-gray-400">
+            {/* <div className="flex gap-6 text-xs text-gray-400">
               <Link href="/privacy" className="transition-colors hover:text-yellow-main">
                 Политика конфиденциальности
               </Link>
               <Link href="/terms" className="transition-colors hover:text-yellow-main">
                 Условия использования
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

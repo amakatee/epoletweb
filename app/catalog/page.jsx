@@ -158,116 +158,14 @@ export default function Katalog() {
 
       <div className="py-12 container-custom md:py-16">
         {/* Search & Filter Bar */}
-        <div className="mb-12 space-y-6">
-          {/* Search */}
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute w-5 h-5 text-gray-400 -translate-y-1/2 left-4 top-1/2" />
-            <input
-              type="text"
-              placeholder="Поиск продукции..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full py-4 pl-12 pr-4 text-white placeholder-gray-400 transition-all border border-gray-700 bg-white/5 rounded-2xl focus:outline-none focus:border-primary-yellow focus:ring-2 focus:ring-primary-yellow/20"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute text-gray-400 transition-colors -translate-y-1/2 right-4 top-1/2 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-
-          {/* Filter Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {/* Mobile Filter Button */}
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="flex items-center gap-2 px-4 py-2 transition-colors border border-gray-700 md:hidden bg-white/5 rounded-xl hover:border-primary-yellow"
-              >
-                <Filter className="w-4 h-4" />
-                <span className="text-sm">Фильтры</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Desktop Categories */}
-              <div className="flex-wrap hidden gap-3 md:flex">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                      selectedCategory === category
-                        ? 'bg-primary-yellow text-black shadow-lg shadow-primary-yellow/25'
-                        : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    {category === 'all' ? 'Все товары' : category}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* View Toggle */}
-            <div className="flex items-center gap-2 p-1 border border-gray-700 bg-white/5 rounded-xl">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-primary-yellow text-black' : 'text-gray-400 hover:text-white'}`}
-              >
-                <Grid3x3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-primary-yellow text-black' : 'text-gray-400 hover:text-white'}`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Filter Panel */}
-          <AnimatePresence>
-            {isFilterOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden border border-gray-700 md:hidden bg-white/5 rounded-xl"
-              >
-                <div className="p-4 space-y-3">
-                  <h3 className="mb-2 text-sm font-medium text-gray-300">Категории</h3>
-                  {categories.map((category) => (
-                    <button
-                      key={category}
-                      onClick={() => {
-                        setSelectedCategory(category);
-                        setIsFilterOpen(false);
-                      }}
-                      className={`block w-full text-left px-4 py-2 rounded-lg text-sm transition-colors ${
-                        selectedCategory === category ? 'bg-primary-yellow text-black' : 'text-gray-300 hover:bg-white/10'
-                      }`}
-                    >
-                      {category === 'all' ? 'Все товары' : category}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="text-sm text-center text-gray-400">
-            Найдено товаров: {filteredProducts.length}
-          </div>
-        </div>
+       
 
         {/* Products Section */}
         {filteredProducts.length > 0 ? (
           <div
             ref={productsContainerRef}
             className={viewMode === 'grid'
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8"
               : "space-y-6"
             }
           >

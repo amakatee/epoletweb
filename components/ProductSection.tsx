@@ -1,8 +1,15 @@
 // components/ProductSection.jsx
 'use client';
 
+import React, { useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+// Register GSAP plugins
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 /**
  * Helper function to extract plain text from Portable Text
@@ -30,6 +37,9 @@ const getPlainText = (portableText) => {
  */
 export default function ProductSection({ product }) {
   const { name, details, slug, imageUrl, altImage } = product;
+  const cardRef = useRef(null);
+  const buttonRef = useRef(null);
+  const imageRef = useRef(null);
 
   if (!slug) return null;
 
@@ -39,21 +49,108 @@ export default function ProductSection({ product }) {
     ? `${plainDetails.substring(0, 60)}...` 
     : plainDetails;
 
+  useEffect(() => {
+    if (!cardRef.current) return;
+
+    const ctx = gsap.context(() => {
+      // Card entrance animation
+      gsap.fromTo(cardRef.current,
+        {
+          opacity: 0,
+          y: 50,
+          scale: 0.95
+        },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.6,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: cardRef.current,
+            start: "top 85%",
+            toggleActions: "play none none reverse"
+          }
+        }
+      );
+
+      // Image hover animation
+      if (imageRef.current) {
+        const handleMouseEnter = () => {
+          gsap.to(imageRef.current, {
+            scale: 1.1,
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        };
+
+        const handleMouseLeave = () => {
+          gsap.to(imageRef.current, {
+            scale: 1,
+            duration: 0.4,
+            ease: "power2.out"
+          });
+        };
+
+        const imageElement = imageRef.current;
+        imageElement.addEventListener('mouseenter', handleMouseEnter);
+        imageElement.addEventListener('mouseleave', handleMouseLeave);
+
+        return () => {
+          imageElement.removeEventListener('mouseenter', handleMouseEnter);
+          imageElement.removeEventListener('mouseleave', handleMouseLeave);
+        };
+      }
+
+      // Button hover animation - only scale, keep yellow background
+      if (buttonRef.current) {
+        const button = buttonRef.current;
+        const handleMouseEnter = () => {
+          gsap.to(button, {
+            scale: 1.05,
+            boxShadow: "0 10px 20px rgba(250, 200, 0, 0.4)",
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        };
+
+        const handleMouseLeave = () => {
+          gsap.to(button, {
+            scale: 1,
+            boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
+            duration: 0.3,
+            ease: "power2.out"
+          });
+        };
+
+        button.addEventListener('mouseenter', handleMouseEnter);
+        button.addEventListener('mouseleave', handleMouseLeave);
+
+        return () => {
+          button.removeEventListener('mouseenter', handleMouseEnter);
+          button.removeEventListener('mouseleave', handleMouseLeave);
+        };
+      }
+    }, cardRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <Link href={productUrl} passHref legacyBehavior>
-      <motion.a
-        className="group flex flex-col items-center text-center cursor-pointer bg-white/5 rounded-xl p-4 hover:bg-white/10 transition-all duration-300"
-        whileHover={{ scale: 1.02, y: -4 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      <a
+        ref={cardRef}
+        className="group flex flex-col items-center text-center cursor-pointer bg-white/5 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 w-full"
+        style={{ textDecoration: 'none' }}
       >
         {/* Image Container */}
-        <div className="w-full aspect-square overflow-hidden rounded-lg mb-4 bg-gray-800">
+        <div className="w-full aspect-square overflow-hidden rounded-xl mb-5 bg-gray-800">
           {imageUrl ? (
             <img
+              ref={imageRef}
               src={imageUrl}
               alt={altImage || name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className="w-full h-full object-cover transition-transform duration-500"
               loading="lazy"
             />
           ) : (
@@ -69,16 +166,20 @@ export default function ProductSection({ product }) {
         </h3>
         
         {truncatedDetails && (
-          <p className="text-white/60 text-sm leading-relaxed line-clamp-2">
+          <p className="text-white/60 text-sm leading-relaxed line-clamp-2 mb-4">
             {truncatedDetails}
           </p>
         )}
 
-        {/* Button */}
-        <span className="mt-4 inline-block px-4 py-2 border border-yellow-main text-yellow-main rounded-lg text-sm hover:bg-yellow-main hover:text-black transition-all duration-300">
+        {/* Button - Always Yellow with Black Text */}
+        <span
+          ref={buttonRef}
+          className="inline-block px-5 py-2.5 bg-yellow-main text-gray-900 rounded-lg text-sm font-medium shadow-md"
+          style={{ backgroundColor: '#FDB813', color: '#1a1a1a' }}
+        >
           Подробнее
         </span>
-      </motion.a>
+      </a>
     </Link>
   );
 }
