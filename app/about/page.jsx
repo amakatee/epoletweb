@@ -40,6 +40,8 @@ export default function AboutPage() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    
     async function fetchData() {
       try {
         // Check if Sanity is configured
@@ -48,13 +50,18 @@ export default function AboutPage() {
         
         if (!hasSanity) {
           console.warn('Sanity not configured, using fallback data');
-          setBannerData(fallbackData);
-          setLoading(false);
+          if (isMounted) setBannerData(fallbackData);
+          if (isMounted) setLoading(false);
           return;
         }
 
-        // Try to fetch data
-        const data = await client.fetch(`
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Sanity fetch timeout')), 8000);
+        });
+
+        // Race between fetch and timeout
+        const fetchPromise = client.fetch(`
           *[_type == "banner"][0] {
             titleAbout,
             aboutsection,
@@ -65,28 +72,36 @@ export default function AboutPage() {
             }
           }
         `);
+
+        const data = await Promise.race([fetchPromise, timeoutPromise]);
         
-        // If data is null or empty, use fallback
-        if (!data) {
-          setBannerData(fallbackData);
-        } else {
-          setBannerData({
-            ...fallbackData,
-            ...data,
-            aboutArray: data?.aboutArray?.length ? data.aboutArray : fallbackData.aboutArray,
-          });
+        if (isMounted) {
+          if (!data) {
+            setBannerData(fallbackData);
+          } else {
+            setBannerData({
+              ...fallbackData,
+              ...data,
+              aboutArray: data?.aboutArray?.length ? data.aboutArray : fallbackData.aboutArray,
+            });
+          }
         }
       } catch (error) {
         console.error('Error fetching about data:', error);
-        setBannerData(fallbackData);
+        if (isMounted) setBannerData(fallbackData);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
     
     fetchData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
+  // GSAP Animations
   useEffect(() => {
     if (!containerRef.current || loading) return;
 
@@ -302,15 +317,17 @@ export default function AboutPage() {
           </div>
         )}
 
-        <div className="pb-12 text-center sm:pb-16 md:pb-20 lg:pb-24">
-          <Link 
-            href="/catalog"
-            ref={ctaRef}
-            className="inline-block px-8 py-3.5 bg-yellow-main text-black font-medium rounded-lg text-base sm:text-lg hover:bg-yellow-400 transition-all duration-300 shadow-md hover:shadow-lg"
-          >
-            Перейти в каталог
-          </Link>
-        </div>
+<div className="pb-12 text-center sm:pb-16 md:pb-20 lg:pb-24">
+  <Link 
+    href="/catalog"
+    ref={ctaRef}
+    className="group inline-flex items-center gap-3 text-white/70 hover:text-yellow-main transition-all duration-300"
+  >
+    <span className="w-1.5 h-1.5 rounded-full bg-yellow-main transition-all duration-300 group-hover:scale-125"></span>
+    <span className="text-sm font-light tracking-wider uppercase sm:text-base">Перейти в каталог</span>
+    <span className="w-1.5 h-1.5 rounded-full bg-yellow-main transition-all duration-300 group-hover:scale-125"></span>
+  </Link>
+</div>
       </div>
     </div>
   );
