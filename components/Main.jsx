@@ -83,7 +83,7 @@ export default function Main({ mainBanner }) {
         <h1
           ref={title}
           className="max-w-5xl font-light text-white leading-[1.1]
-                     text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[4.8rem] 2xl:text-[5.5rem]"
+                     text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-[4.8rem]  2xl:text-[5.5rem]"
           style={{
             willChange: 'transform, opacity',
             textShadow: '0 12px 40px rgba(0,0,0,0.55)',

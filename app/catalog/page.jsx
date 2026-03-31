@@ -165,8 +165,8 @@ export default function Katalog() {
           <div
             ref={productsContainerRef}
             className={viewMode === 'grid'
-              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 md:gap-8"
-              : "space-y-6"
+              ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3  gap-15 md:gap-8"
+              : "space-y-6 "
             }
           >
             {filteredProducts.map((product, index) => (

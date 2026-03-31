@@ -88,11 +88,11 @@ const Footer = () => {
               </div>
 
               {/* Work Hours */}
-              <div className="pt-4 border-t border-white/10">
+              {/* <div className="pt-4 border-t border-white/10">
                 <p className="text-sm text-gray-400">
                   <span className="text-yellow-main">Часы работы:</span> {CONTACT_INFO.workHours}
                 </p>
-              </div>
+              </div> */}
             </div>
 
             {/* Optional: Social Links */}

@@ -1,43 +1,91 @@
 // app/product/[slug]/page.jsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import { client, urlFor } from '../../../lib/sanity/client';
 import { PortableText } from '@portabletext/react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, CheckCircle } from 'lucide-react';
-import { useCartContext } from '../../../context/StateContext'; // Changed to useCartContext
+import { X, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
+import { useCartContext } from '../../../context/StateContext';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Lazy load the lightbox components that aren't needed immediately
+const LightboxImage = lazy(() => import('next/image'));
+
 const portableTextComponents = {
     block: {
-        normal: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
-        h2: ({ children }) => <h2 className="mb-4 text-2xl font-semibold">{children}</h2>,
-        h3: ({ children }) => <h3 className="mb-3 text-xl font-semibold">{children}</h3>,
+        normal: ({ children }) => <p className="mb-4 leading-relaxed text-black">{children}</p>,
+        h2: ({ children }) => <h2 className="mb-4 text-2xl font-semibold text-black">{children}</h2>,
+        h3: ({ children }) => <h3 className="mb-3 text-xl font-semibold text-black">{children}</h3>,
     },
     list: {
-        bullet: ({ children }) => <ul className="pl-6 mb-4 space-y-2 list-disc">{children}</ul>,
-        number: ({ children }) => <ol className="pl-6 mb-4 space-y-2 list-decimal">{children}</ol>,
+        bullet: ({ children }) => <ul className="pl-6 mb-4 space-y-2 list-disc text-black">{children}</ul>,
+        number: ({ children }) => <ol className="pl-6 mb-4 space-y-2 list-decimal text-black">{children}</ol>,
     },
     listItem: {
-        bullet: ({ children }) => <li className="leading-relaxed">{children}</li>,
-        number: ({ children }) => <li className="leading-relaxed">{children}</li>,
+        bullet: ({ children }) => <li className="leading-relaxed text-black">{children}</li>,
+        number: ({ children }) => <li className="leading-relaxed text-black">{children}</li>,
     },
     marks: {
-        strong: ({ children }) => <strong className="font-semibold text-primary-yellow">{children}</strong>,
+        strong: ({ children }) => <strong className="font-semibold text-black">{children}</strong>,
     },
+};
+
+// Image component with lazy loading
+const LazyImage = ({ src, alt, className, sizes, onClick }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const imgRef = useRef(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setIsLoaded(true);
+                        observer.disconnect();
+                    }
+                });
+            },
+            { rootMargin: '50px' }
+        );
+
+        if (imgRef.current) {
+            observer.observe(imgRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={imgRef} className={`relative w-full h-full ${className || ''}`}>
+            {isLoaded ? (
+                <Image
+                    src={src}
+                    alt={alt}
+                    fill
+                    className="object-cover transition-transform duration-300"
+                    sizes={sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"}
+                    loading="lazy"
+                    onClick={onClick}
+                />
+            ) : (
+                <div className="absolute inset-0 bg-gray-800/50 animate-pulse flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-yellow-500 rounded-full border-t-transparent animate-spin" />
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default function ProductDetails() {
     const params = useParams();
     const slug = params?.slug;
 
-    // Use the existing context values
     const { 
         show: isModalOpen, 
         index: currentIndex, 
@@ -48,11 +96,14 @@ export default function ProductDetails() {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedImage, setSelectedImage] = useState(0);
+    const [loadedImages, setLoadedImages] = useState({});
 
     const infoRef = useRef(null);
-    const isLightTheme = slug === 'integralnyi-ppu-light';
+    const imagesRef = useRef(null);
+    const featureItemsRef = useRef([]);
 
-    // Navigation functions
+    // Navigation functions for lightbox
     const handlePrevImage = (totalImages) => {
         if (totalImages && totalImages > 0) {
             const newIndex = (currentIndex - 1 + totalImages) % totalImages;
@@ -65,6 +116,11 @@ export default function ProductDetails() {
             const newIndex = (currentIndex + 1) % totalImages;
             openModal(newIndex);
         }
+    };
+
+    // Mark image as loaded
+    const handleImageLoad = (index) => {
+        setLoadedImages(prev => ({ ...prev, [index]: true }));
     };
 
     // Fetch product
@@ -110,21 +166,44 @@ export default function ProductDetails() {
 
     // GSAP Animations
     useEffect(() => {
-        if (loading || !product || !infoRef.current) return;
+        if (loading || !product) return;
 
-        const ctx = gsap.context(() => {
-            gsap.fromTo(infoRef.current, 
-                { opacity: 0, y: 50 }, 
-                { opacity: 1, y: 0, duration: 1.1, ease: "power3.out" }
-            );
+        const timer = setTimeout(() => {
+            const ctx = gsap.context(() => {
+                if (infoRef.current) {
+                    gsap.fromTo(infoRef.current, 
+                        { opacity: 0, y: 30 }, 
+                        { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
+                    );
+                }
 
-            gsap.fromTo(".feature-item", 
-                { opacity: 0, x: -30 }, 
-                { opacity: 1, x: 0, stagger: 0.08, duration: 0.7, ease: "power2.out", delay: 0.3 }
-            );
-        }, infoRef);
+                if (imagesRef.current) {
+                    gsap.fromTo(imagesRef.current, 
+                        { opacity: 0, x: -30 }, 
+                        { opacity: 1, x: 0, duration: 0.8, ease: "power3.out", delay: 0.2 }
+                    );
+                }
 
-        return () => ctx.revert();
+                const validFeatureItems = featureItemsRef.current.filter(item => item);
+                if (validFeatureItems.length > 0) {
+                    gsap.fromTo(validFeatureItems,
+                        { opacity: 0, x: -20 },
+                        { 
+                            opacity: 1, 
+                            x: 0, 
+                            stagger: 0.08, 
+                            duration: 0.6, 
+                            ease: "power2.out", 
+                            delay: 0.4 
+                        }
+                    );
+                }
+            });
+
+            return () => ctx.revert();
+        }, 100);
+
+        return () => clearTimeout(timer);
     }, [product, loading]);
 
     // Loading state
@@ -132,8 +211,8 @@ export default function ProductDetails() {
         return (
             <div className="flex items-center justify-center min-h-screen bg-black">
                 <div className="text-center">
-                    <div className="w-12 h-12 mx-auto mb-4 border-4 rounded-full border-t-transparent border-primary-yellow animate-spin" />
-                    <p className="text-xl text-white">Загрузка товара...</p>
+                    <div className="w-12 h-12 mx-auto mb-4 border-4 rounded-full border-t-transparent border-yellow-500 animate-spin" />
+                    {/* <p className="text-xl text-white">Загрузка товара...</p> */}
                 </div>
             </div>
         );
@@ -145,7 +224,7 @@ export default function ProductDetails() {
             <div className="flex items-center justify-center min-h-screen bg-black">
                 <div className="max-w-md px-6 text-center">
                     <p className="mb-4 text-2xl text-red-500">{error || 'Товар не найден'}</p>
-                    <a href="/catalog" className="inline-block px-8 py-3 font-medium text-black bg-primary-yellow rounded-xl hover:bg-yellow-400 transition-colors">
+                    <a href="/catalog" className="inline-block px-8 py-3 font-medium text-black bg-yellow-500 rounded-xl hover:bg-yellow-400 transition-colors">
                         Вернуться в каталог
                     </a>
                 </div>
@@ -155,126 +234,236 @@ export default function ProductDetails() {
 
     const { name, description, details, specifications, features, images = [] } = product;
     const hasImages = images && images.length > 0;
-    const currentImage = hasImages ? images[currentIndex] : null;
 
     return (
-        <div className={`min-h-screen pt-20 ${isLightTheme ? 'bg-gray-50' : 'bg-gradient-to-b from-gray-900 to-black'}`}>
-            <div className="px-4 py-12 mx-auto max-w-7xl sm:px-6 md:py-16">
+        <div className="min-h-screen bg-black pt-20">
+            <div className="px-4 mx-auto sm:px-6 lg:px-8">
                 {/* Back Link */}
                 <a 
                     href="/catalog" 
-                    className="inline-flex items-center gap-2 mb-8 text-sm transition-colors hover:text-primary-yellow group"
+                    className="inline-flex items-center gap-2 mb-6 text-sm text-white/70 transition-colors hover:text-yellow-500 group"
                 >
                     <span className="group-hover:-translate-x-1 transition-transform">←</span> 
                     Назад в каталог
                 </a>
 
-                <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
-                    {/* ==================== IMAGE GALLERY ==================== */}
-                    <div>
-                        <div className="mb-4">
-                            <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium ${isLightTheme ? 'bg-gray-200 text-gray-700' : 'bg-white/10 text-gray-300'}`}>
-                                <CheckCircle className="w-3 h-3" />
-                                {isLightTheme ? 'Светлая серия' : 'Основная серия'}
-                            </span>
-                        </div>
-
-                        {/* Image Grid */}
+                {/* Desktop Layout - 50/50 Split */}
+                <div className="hidden lg:grid lg:grid-cols-2 lg:gap-12 xl:gap-16">
+                    {/* Left Side - Image Thumbnails Grid */}
+                    <div ref={imagesRef} className="space-y-4">
                         {hasImages ? (
-                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2">
-                                {images.slice(0, 4).map((imgUrl, i) => (
-                                    <motion.div
+                            <div className="grid grid-cols-4 gap-3">
+                                {images.map((imgUrl, i) => (
+                                    <div
                                         key={i}
-                                        onClick={() => openModal(i)}
-                                        className="relative overflow-hidden transition-all duration-300 cursor-pointer group aspect-square rounded-2xl bg-gray-800/50 border border-white/10 hover:border-primary-yellow/50"
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => {
+                                            setSelectedImage(i);
+                                            openModal(i);
+                                        }}
+                                        className="relative overflow-hidden cursor-pointer group aspect-square rounded-xl bg-gray-800/50 border border-gray-700 hover:border-yellow-500/50 transition-all"
                                     >
+                                        {!loadedImages[i] && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-gray-800/50">
+                                                <div className="w-6 h-6 border-2 border-yellow-500 rounded-full border-t-transparent animate-spin" />
+                                            </div>
+                                        )}
                                         <Image
                                             src={imgUrl}
                                             alt={`${name} - фото ${i + 1}`}
                                             fill
-                                            className="object-cover transition-transform duration-500 group-hover:scale-110"
-                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                            className={`object-cover transition-transform duration-300 group-hover:scale-110 ${
+                                                loadedImages[i] ? 'opacity-100' : 'opacity-0'
+                                            }`}
+                                            sizes="(max-width: 1024px) 20vw, 10vw"
+                                            loading="lazy"
+                                            onLoad={() => handleImageLoad(i)}
+                                            onError={() => handleImageLoad(i)}
                                         />
-                                        <div className="absolute inset-0 transition-colors bg-black/30 group-hover:bg-black/20" />
-                                    </motion.div>
+                                        <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 opacity-0 bg-black/50 group-hover:opacity-100">
+                                            <ZoomIn className="w-6 h-6 text-white" />
+                                        </div>
+                                    </div>
                                 ))}
                             </div>
                         ) : (
-                            <p className="py-12 text-center text-gray-500">Нет изображений для этого товара</p>
-                        )}
-                        
-                        {hasImages && images.length > 4 && (
-                            <p className="mt-4 text-sm text-center text-gray-400">
-                                + еще {images.length - 4} фото
-                            </p>
+                            <div className="flex items-center justify-center aspect-square rounded-2xl bg-gray-800/50">
+                                <p className="text-gray-400">Нет изображений</p>
+                            </div>
                         )}
                     </div>
 
-                    {/* ==================== PRODUCT INFORMATION ==================== */}
-                    <div ref={infoRef} className={`space-y-8 ${isLightTheme ? 'text-gray-800' : 'text-white'}`}>
-                        <div>
-                            <h1 className="mb-4 text-4xl font-light tracking-tight md:text-5xl">{name}</h1>
+                    {/* Right Side - Text Content with Yellow Gradient */}
+                    <div 
+                        ref={infoRef}
+                        className="p-8 rounded-2xl"
+                        style={{
+                            background: 'linear-gradient(135deg, #FDB813 0%, #F59E0B 50%, #FBBF24 100%)'
+                        }}
+                    >
+                        <div className="space-y-6">
+                            <h1 className="text-3xl font-bold text-black md:text-4xl lg:text-5xl">
+                                {name}
+                            </h1>
                             
                             {description && (
-                                <p className="text-lg text-gray-400">{description}</p>
+                                <p className="text-lg text-black">
+                                    {description}
+                                </p>
+                            )}
+
+                            {/* Details with PortableText */}
+                            {details && (
+                                <div className="prose prose-lg max-w-none text-black">
+                                    <PortableText value={details} components={portableTextComponents} />
+                                </div>
+                            )}
+
+                            {/* Features */}
+                            {features?.length > 0 && (
+                                <div className="pt-4">
+                                    <h3 className="mb-4 text-xl font-semibold text-black">Ключевые особенности</h3>
+                                    <ul className="space-y-3">
+                                        {features.map((feature, idx) => (
+                                            <li 
+                                                key={idx} 
+                                                ref={el => featureItemsRef.current[idx] = el}
+                                                className="feature-item flex gap-3 text-black"
+                                            >
+                                                <span className="text-black text-lg">•</span>
+                                                <span>{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Specifications Table */}
+                            {specifications && Object.keys(specifications).length > 0 && (
+                                <div className="pt-4">
+                                    <h3 className="mb-4 text-xl font-semibold text-black">Технические характеристики</h3>
+                                    <div className="overflow-hidden rounded-xl bg-black/10">
+                                        <div className="divide-y divide-black/20">
+                                            {Object.entries(specifications).map(([key, value]) => (
+                                                <div key={key} className="flex justify-between p-4 text-sm">
+                                                    <span className="font-medium text-black">{key}</span>
+                                                    <span className="text-black text-right">{value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
+                    </div>
+                </div>
 
-                        {/* Details with PortableText */}
-                        {details && (
-                            <div className={`prose prose-invert max-w-none text-[15px] leading-relaxed ${isLightTheme ? 'prose-gray' : ''}`}>
-                                <PortableText value={details} components={portableTextComponents} />
-                            </div>
-                        )}
+                {/* Mobile Layout - Text First, Then Images in Column */}
+                <div className="lg:hidden space-y-6">
+                    {/* Text Section with Yellow Gradient */}
+                    <div 
+                        className="p-6 rounded-2xl"
+                        style={{
+                            background: 'linear-gradient(135deg, #FDB813 0%, #F59E0B 50%, #FBBF24 100%)'
+                        }}
+                    >
+                        <div className="space-y-4">
+                            <h1 className="text-2xl font-bold text-black sm:text-3xl">
+                                {name}
+                            </h1>
+                            
+                            {description && (
+                                <p className="text-base text-black">
+                                    {description}
+                                </p>
+                            )}
 
-                        {/* Features */}
-                        {features?.length > 0 && (
-                            <div className={`p-7 rounded-3xl ${isLightTheme ? 'bg-gray-100' : 'bg-white/5'} border ${isLightTheme ? 'border-gray-200' : 'border-gray-700'}`}>
-                                <h3 className="mb-5 text-xl font-semibold">Ключевые особенности</h3>
-                                <ul className="space-y-4">
-                                    {features.map((feature, idx) => (
-                                        <li key={idx} className="feature-item flex gap-4 text-[15px]">
-                                            <CheckCircle className="w-5 h-5 text-primary-yellow mt-0.5 flex-shrink-0" />
-                                            <span>{feature}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
-                        {/* Specifications Table */}
-                        {specifications && Object.keys(specifications).length > 0 && (
-                            <div className={`rounded-3xl overflow-hidden border ${isLightTheme ? 'border-gray-200' : 'border-gray-700'}`}>
-                                <div className={`p-6 ${isLightTheme ? 'bg-gray-100' : 'bg-white/5'}`}>
-                                    <h3 className="text-xl font-semibold">Технические характеристики</h3>
+                            {/* Details */}
+                            {details && (
+                                <div className="text-black text-sm">
+                                    <PortableText value={details} components={portableTextComponents} />
                                 </div>
-                                <div className={`divide-y ${isLightTheme ? 'divide-gray-200' : 'divide-gray-700'}`}>
-                                    {Object.entries(specifications).map(([key, value]) => (
-                                        <div key={key} className="flex justify-between p-6 text-sm">
-                                            <span className={isLightTheme ? 'text-gray-600' : 'text-gray-400'}>{key}</span>
-                                            <span className="font-medium text-right">{value}</span>
+                            )}
+
+                            {/* Features */}
+                            {features?.length > 0 && (
+                                <div className="pt-2">
+                                    <h3 className="mb-3 text-lg font-semibold text-black">Ключевые особенности</h3>
+                                    <ul className="space-y-2">
+                                        {features.map((feature, idx) => (
+                                            <li key={idx} className="flex gap-2 text-black text-sm">
+                                                <span className="text-black">•</span>
+                                                <span>{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Specifications */}
+                            {specifications && Object.keys(specifications).length > 0 && (
+                                <div className="pt-2">
+                                    <h3 className="mb-3 text-lg font-semibold text-black">Технические характеристики</h3>
+                                    <div className="overflow-hidden rounded-xl bg-black/10">
+                                        <div className="divide-y divide-black/20">
+                                            {Object.entries(specifications).map(([key, value]) => (
+                                                <div key={key} className="flex justify-between p-3 text-xs">
+                                                    <span className="font-medium text-black">{key}</span>
+                                                    <span className="text-black text-right">{value}</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Images Section - One per row, full width with lazy loading */}
+                    <div ref={imagesRef} className="space-y-4">
+                        {hasImages ? (
+                            images.map((imgUrl, i) => (
+                                <div
+                                    key={i}
+                                    onClick={() => {
+                                        setSelectedImage(i);
+                                        openModal(i);
+                                    }}
+                                    className="relative overflow-hidden cursor-pointer group aspect-square rounded-2xl bg-gray-800/50 border border-gray-700 hover:border-yellow-500/50 transition-all w-full"
+                                >
+                                    {!loadedImages[i] && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800/50">
+                                            <div className="w-8 h-8 border-2 border-yellow-500 rounded-full border-t-transparent animate-spin" />
+                                        </div>
+                                    )}
+                                    <Image
+                                        src={imgUrl}
+                                        alt={`${name} - фото ${i + 1}`}
+                                        fill
+                                        className={`object-cover transition-transform duration-300 group-hover:scale-105 ${
+                                            loadedImages[i] ? 'opacity-100' : 'opacity-0'
+                                        }`}
+                                        sizes="100vw"
+                                        loading="lazy"
+                                        onLoad={() => handleImageLoad(i)}
+                                        onError={() => handleImageLoad(i)}
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 opacity-0 bg-black/50 group-hover:opacity-100">
+                                        <ZoomIn className="w-8 h-8 text-white" />
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex items-center justify-center aspect-square rounded-2xl bg-gray-800/50">
+                                <p className="text-gray-400">Нет изображений</p>
                             </div>
                         )}
-
-                        {/* Contact CTA */}
-                        <a
-                            href="#contact"
-                            className="block w-full py-4 text-center font-semibold text-black bg-primary-yellow rounded-2xl hover:bg-yellow-400 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                            Получить консультацию
-                        </a>
                     </div>
                 </div>
             </div>
 
-            {/* ==================== IMAGE LIGHTBOX ==================== */}
+            {/* Image Lightbox with Lazy Loading */}
             <AnimatePresence>
-                {isModalOpen && hasImages && currentImage && (
+                {isModalOpen && hasImages && images[currentIndex] && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -302,12 +491,13 @@ export default function ProductDetails() {
                         <div className="relative w-full max-w-5xl px-4" onClick={(e) => e.stopPropagation()}>
                             <div className="relative w-full aspect-video max-h-[85vh]">
                                 <Image
-                                    src={currentImage}
+                                    src={images[currentIndex]}
                                     alt={`${name} - фото ${currentIndex + 1}`}
                                     fill
                                     className="object-contain"
-                                    priority
+                                    priority={false}
                                     sizes="100vw"
+                                    loading="lazy"
                                 />
                             </div>
                         </div>
