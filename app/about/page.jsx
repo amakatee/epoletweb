@@ -26,7 +26,7 @@ export default function AboutPage() {
   const ctaRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Fallback data in case Sanity fetch fails
+  // Fallback data
   const fallbackData = {
     aboutArray: [
       { description: 'Гибкое ценообразование' },
@@ -35,20 +35,25 @@ export default function AboutPage() {
     ],
     maindetails: 'Компания Эполет специализируется на производстве изделий из мягкого, жесткого и интегрального пенополиуретана. Мы предлагаем высококачественную продукцию для различных отраслей промышленности и бытового использования.',
     aboutsection: 'О компании',
-    titleAbout: 'О нас'
+    titleAbout: 'О нас',
+    imageAbout: null
   };
 
   useEffect(() => {
     async function fetchData() {
       try {
         // Check if Sanity is configured
-        if (!process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || !client) {
+        const hasSanity = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID && 
+                          process.env.NEXT_PUBLIC_SANITY_DATASET;
+        
+        if (!hasSanity) {
           console.warn('Sanity not configured, using fallback data');
           setBannerData(fallbackData);
           setLoading(false);
           return;
         }
 
+        // Try to fetch data
         const data = await client.fetch(`
           *[_type == "banner"][0] {
             titleAbout,
@@ -61,20 +66,24 @@ export default function AboutPage() {
           }
         `);
         
-        // Merge with fallback for missing fields
-        setBannerData({
-          ...fallbackData,
-          ...data,
-          aboutArray: data?.aboutArray?.length ? data.aboutArray : fallbackData.aboutArray,
-        });
+        // If data is null or empty, use fallback
+        if (!data) {
+          setBannerData(fallbackData);
+        } else {
+          setBannerData({
+            ...fallbackData,
+            ...data,
+            aboutArray: data?.aboutArray?.length ? data.aboutArray : fallbackData.aboutArray,
+          });
+        }
       } catch (error) {
         console.error('Error fetching about data:', error);
-        // Use fallback data on error
         setBannerData(fallbackData);
       } finally {
         setLoading(false);
       }
     }
+    
     fetchData();
   }, []);
 
@@ -82,15 +91,10 @@ export default function AboutPage() {
     if (!containerRef.current || loading) return;
 
     const ctx = gsap.context(() => {
-      // Cards stagger animation
       const validCards = cardsRef.current.filter(card => card);
       if (validCards.length > 0) {
         gsap.fromTo(validCards,
-          {
-            opacity: 0,
-            y: 50,
-            scale: 0.9
-          },
+          { opacity: 0, y: 50, scale: 0.9 },
           {
             opacity: 1,
             y: 0,
@@ -106,7 +110,6 @@ export default function AboutPage() {
           }
         );
 
-        // Add hover animations for each card
         validCards.forEach((card) => {
           card.addEventListener('mouseenter', () => {
             gsap.to(card, {
@@ -130,13 +133,9 @@ export default function AboutPage() {
         });
       }
 
-      // Description animation
       if (descriptionRef.current) {
         gsap.fromTo(descriptionRef.current,
-          {
-            opacity: 0,
-            y: 40
-          },
+          { opacity: 0, y: 40 },
           {
             opacity: 1,
             y: 0,
@@ -152,14 +151,9 @@ export default function AboutPage() {
         );
       }
 
-      // CTA Button animation
       if (ctaRef.current) {
         gsap.fromTo(ctaRef.current,
-          {
-            opacity: 0,
-            scale: 0.9,
-            y: 30
-          },
+          { opacity: 0, scale: 0.9, y: 30 },
           {
             opacity: 1,
             scale: 1,
@@ -175,7 +169,6 @@ export default function AboutPage() {
           }
         );
 
-        // Hover animation for CTA button
         const ctaButton = ctaRef.current;
         const handleMouseEnter = () => {
           gsap.to(ctaButton, {
@@ -203,7 +196,6 @@ export default function AboutPage() {
           ctaButton.removeEventListener('mouseleave', handleMouseLeave);
         };
       }
-
     }, containerRef);
 
     return () => ctx.revert();
@@ -253,12 +245,9 @@ export default function AboutPage() {
         currentPage={bannerData?.titleAbout || 'О нас'} 
       />
 
-      {/* About Content Section */}
       <div ref={containerRef} className="w-full bg-black about-route-section">
-        {/* Features Grid */}
         <div className="w-full px-4 py-12 sm:px-6 md:px-8 sm:py-16 md:py-20 lg:py-24">
           <div className="mx-auto max-w-7xl">
-            {/* Cards Grid */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 sm:gap-8 md:gap-10 lg:gap-12">
               {aboutItems.map((item, index) => {
                 const IconComponent = item.icon;
@@ -300,7 +289,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Company Description */}
         {bannerData?.maindetails && (
           <div ref={descriptionRef} className="w-full px-4 pb-12 sm:px-6 md:px-8 sm:pb-16 md:pb-20 lg:pb-24">
             <div className="max-w-4xl mx-auto">
@@ -314,7 +302,6 @@ export default function AboutPage() {
           </div>
         )}
 
-        {/* CTA Button */}
         <div className="pb-12 text-center sm:pb-16 md:pb-20 lg:pb-24">
           <Link 
             href="/catalog"

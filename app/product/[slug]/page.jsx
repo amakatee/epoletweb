@@ -11,7 +11,7 @@ import { X, ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 import { useCartContext } from '../../../context/StateContext';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
+import SEO from '../../../components/Seo'
 gsap.registerPlugin(ScrollTrigger);
 
 // Lazy load the lightbox components that aren't needed immediately

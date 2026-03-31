@@ -27,7 +27,7 @@ const Footer = () => {
   const [isFormVisible, setIsFormVisible] = useState(false);
 
   return (
-    <footer className="text-white bg-gradient-to-b from-gray-800 to-black">
+    <footer className="text-white bg-black">
       {/* Main Footer Content */}
       <div className="px-4 py-8 mx-auto footer-container max-w-7xl sm:px-6 lg:px-8 lg:py-12">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
