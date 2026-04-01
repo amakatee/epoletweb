@@ -342,7 +342,7 @@ const Navbar = () => {
         {/* Main Navigation Bar */}
         <div
           ref={navRef}
-          className="flex items-center justify-between h-16 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 lg:h-20"
+          className="flex items-center justify-between h-20 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 lg:h-20"
         >
           {/* Logo */}
           <div
