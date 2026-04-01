@@ -119,7 +119,7 @@ export async function POST(request) {
     const info = await transporter.sendMail({
       from: `"${Name}" <${process.env.YANDEX_EMAIL}>`,
       replyTo: Email,
-      to: 'katezi@bk.ru',
+      to: 'partner@epolet5.ru',
    //   to: 'partner@epolet5.ru',
       subject: `Новая заявка от ${Name}`,
       html: htmlContent,
